@@ -1,14 +1,33 @@
+import { v4 as uuidv4 } from 'uuid'
 import { categories } from "../data/categories"
 import { useState } from "react"
 import type { Activity } from "../types"
+import { ActivityActions, ActivityState } from "../reducers/activityReducer"
+import { useEffect } from 'react'
 
-export default function Form() {
+type FormProps = {
+    dispatch: React.Dispatch<ActivityActions>
+    state: ActivityState
+}
 
-    const [activity, setActivity] = useState<Activity>({
-        category: 1,
-        name: '',
-        calories: 0
-    })
+const initialState : Activity = {
+    id: uuidv4(),
+    category: 1,
+    name: '',
+    calories: 0
+}
+
+export default function Form({ dispatch, state } : FormProps) {
+
+    const [activity, setActivity] = useState<Activity>(initialState)
+
+    useEffect(() => {
+        if(state.activeId){
+            const selectedActivity = state.activities.filter( activityState => activityState.id === state.activeId)[0]
+
+            setActivity(selectedActivity)
+        }
+    }, [state.activeId])
 
     const handleChange = (e: React.ChangeEvent<HTMLSelectElement> | React.ChangeEvent<HTMLInputElement>) => {
         const isNumberFields = ['category', 'calories'].includes(e.target.id)
@@ -19,9 +38,29 @@ export default function Form() {
         })
     }
 
+    const isValidActivity = () => {
+        const { name, calories } = activity
+        return name.trim() !== '' && calories > 0
+    }
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        
+        dispatch({
+            type: 'save-activity',
+            payload: { newActivity: activity }
+        })
+
+        setActivity({
+            ...initialState,
+            id: uuidv4(),
+        })
+    }
+
     return (
         <form
             className="space-y-5 bg-white shadow p-10 rounded-lg"
+            onSubmit={handleSubmit}
         >
             <div className="grid grid-cols-1 gap-3">
                 <label htmlFor="category" className="font-bold">Categoria:</label>
@@ -67,8 +106,9 @@ export default function Form() {
 
             <input
                 type="submit"
-                className="bg-gray-800 hover:bg-gray-900 w-full p-2 font-bold text-white rounded-lg uppercase cursor-pointer"
-                value="Guardar comida o actividad"
+                className="bg-gray-800 hover:bg-gray-900 w-full p-2 font-bold text-white rounded-lg uppercase cursor-pointer disabled:opacity-15 disabled:cursor-not-allowed"
+                value={activity.category === 1 ? 'Agregar comida' : 'Agregar actividad'}
+                disabled={!isValidActivity()}
             >
 
             </input>
